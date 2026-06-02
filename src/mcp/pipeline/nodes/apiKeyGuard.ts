@@ -29,8 +29,9 @@ function buildLLM() {
     temperature: 0,
     maxTokens: 512,
     configuration: {
-      baseURL: 'https://openrouter.ai/api/v1',
+      baseURL: process.env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1',
       defaultHeaders: {
+        // HTTP-Referer: URL of your app shown in the OpenRouter dashboard (not the API URL)
         'HTTP-Referer': process.env.OPENROUTER_SITE_URL ?? '',
         'X-Title': process.env.OPENROUTER_APP_NAME ?? 'mcp-langgraph-apikey',
       },
