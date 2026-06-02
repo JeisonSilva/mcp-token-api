@@ -57,12 +57,49 @@ DATABASE_PATH=./data/app.db
 
 ## Executar
 
+### Local (desenvolvimento)
+
 ```bash
 npm install
-npm run dev       # desenvolvimento (hot-reload)
+npm run dev       # hot-reload via nodemon
 npm run build     # compila para dist/
-npm start         # produção
+npm start         # produção local
 ```
+
+### Docker (duas instâncias + nginx)
+
+```bash
+# 1. configure os segredos no .env
+cp .env.example .env
+# edite JWT_ACCESS_SECRET e JWT_REFRESH_SECRET
+
+# 2. suba o stack completo
+docker compose up -d --build
+
+# 3. a API estará disponível em http://localhost
+curl http://localhost/health
+```
+
+**Arquitetura Docker:**
+
+```
+         ┌─────────┐
+:80  ──▶ │  nginx  │  (load balancer — least_conn)
+         └────┬────┘
+         ┌────┴────┐
+    ┌────▼──┐  ┌───▼───┐
+    │ api1  │  │ api2  │  (Node.js :3000)
+    └────┬──┘  └───┬───┘
+         └────┬────┘
+         ┌────▼────┐
+         │ SQLite  │  (volume Docker compartilhado, WAL mode)
+         └─────────┘
+```
+
+> **Nota:** As duas instâncias compartilham o mesmo volume Docker (`sqlite_data`).
+> SQLite com WAL mode suporta múltiplos leitores e um escritor por vez via
+> file-locking POSIX — adequado para cargas de baixo/médio volume.
+> Para alta escala, migre para PostgreSQL/MySQL.
 
 ## Exemplos
 
