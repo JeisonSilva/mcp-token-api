@@ -1,0 +1,6 @@
+{
+  "/auth": { "target": "http://localhost:3000", "secure": false },
+  "/apikeys": { "target": "http://localhost:3000", "secure": false },
+  "/users": { "target": "http://localhost:3000", "secure": false },
+  "/validate": { "target": "http://localhost:3000", "secure": false }
+}
