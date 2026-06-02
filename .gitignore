@@ -432,3 +432,4 @@ FodyWeavers.xsd
 dist/
 data/
 .env
+.mcp.json

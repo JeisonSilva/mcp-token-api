@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "mcp-langgraph-apikey": {
+      "command": "npx",
+      "args": ["ts-node", "src/mcp/index.ts"],
+      "env": {
+        "MCP_API_KEY": "mcp_sk_replace_with_key_generated_by_POST_apikeys",
+        "OPENROUTER_API_KEY": "sk-or-v1-replace_with_your_openrouter_key",
+        "OPENROUTER_MODEL": "openai/gpt-4o-mini",
+        "OPENROUTER_SITE_URL": "http://localhost:3000",
+        "OPENROUTER_APP_NAME": "mcp-langgraph-apikey",
+        "API_BASE_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
