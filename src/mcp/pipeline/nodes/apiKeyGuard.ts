@@ -1,4 +1,4 @@
-import { ChatAnthropic } from '@langchain/anthropic';
+import { ChatOpenAI } from '@langchain/openai';
 import { AIMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
 import { StructuredTool } from '@langchain/core/tools';
 import { getApiKeyTool } from '../tools/getApiKey';
@@ -23,10 +23,18 @@ Never approve access without completing both tool calls successfully.
 Never fabricate or assume the validity of a key.`;
 
 function buildLLM() {
-  return new ChatAnthropic({
-    model: process.env.ANTHROPIC_MODEL ?? 'claude-haiku-4-5-20251001',
+  return new ChatOpenAI({
+    apiKey: process.env.OPENROUTER_API_KEY,
+    model: process.env.OPENROUTER_MODEL ?? 'openai/gpt-4o-mini',
     temperature: 0,
     maxTokens: 512,
+    configuration: {
+      baseURL: 'https://openrouter.ai/api/v1',
+      defaultHeaders: {
+        'HTTP-Referer': process.env.OPENROUTER_SITE_URL ?? '',
+        'X-Title': process.env.OPENROUTER_APP_NAME ?? 'mcp-langgraph-apikey',
+      },
+    },
   }).bindTools(TOOLS);
 }
 
