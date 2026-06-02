@@ -1,58 +1,102 @@
 # mcp-token-api
 
-RESTful API de autenticação com JWT e SQLite.
+Provedor de **API Keys para MCPs e agentes de IA**, com autenticação de usuários via JWT.
+
+## Conceito
+
+MCPs e agentes de IA precisam de credenciais **estáticas e de longa duração** — o ciclo
+de refresh token (credencial que expira periodicamente) quebra esse padrão porque o agente
+não tem usuário humano para renovar o token interativamente.
+
+Este serviço separa os dois mundos:
+
+| Quem        | Como autentica         | Para quê                          |
+|-------------|------------------------|-----------------------------------|
+| **Humano**  | `POST /auth/login` → JWT (1h) | Gerenciar API keys via dashboard |
+| **MCP/Agent** | `X-Api-Key: mcp_sk_...` | Consumir recursos protegidos      |
 
 ## Stack
 
 - **Runtime**: Node.js + TypeScript
 - **Framework**: Express 5
-- **Banco**: SQLite via `better-sqlite3`
-- **Auth**: JWT (access token 15 min + refresh token 7 dias com rotação)
-- **Senha**: bcrypt (12 rounds)
+- **Banco**: SQLite via `better-sqlite3` (WAL mode)
+- **Auth humano**: JWT HS256, expira em 1 h (stateless — sem refresh)
+- **Auth agente**: API Key com 192 bits de entropia, hash SHA-256 no banco
+- **Senha**: bcrypt (fator 12)
 - **Validação**: Zod
 
-## Roles
+## Roles de usuário
 
-| Role       | Descrição                        |
-|------------|----------------------------------|
-| `operator` | Role padrão no cadastro          |
-| `admin`    | Acesso total (gerencia usuários) |
+| Role       | Descrição                              |
+|------------|----------------------------------------|
+| `operator` | Role padrão no cadastro               |
+| `admin`    | Gerencia usuários e roles             |
 
 ## Endpoints
 
-### Auth
+### Autenticação (humano → JWT)
 
-| Método | Rota             | Auth     | Descrição                        |
-|--------|------------------|----------|----------------------------------|
-| POST   | /auth/register   | —        | Cadastro (role = operator)       |
-| POST   | /auth/login      | —        | Login, retorna tokens            |
-| POST   | /auth/refresh    | —        | Renova access token              |
-| POST   | /auth/logout     | Bearer   | Invalida sessão                  |
-| GET    | /auth/me         | Bearer   | Dados do usuário autenticado     |
+| Método | Rota             | Auth     | Descrição                          |
+|--------|------------------|----------|------------------------------------|
+| POST   | /auth/register   | —        | Cadastro (role padrão: `operator`) |
+| POST   | /auth/login      | —        | Login, retorna JWT (1 h)           |
+| POST   | /auth/logout     | Bearer   | 204 — cliente descarta o token     |
+| GET    | /auth/me         | Bearer   | Dados do usuário autenticado       |
+
+### API Keys (requer JWT)
+
+| Método | Rota             | Descrição                                          |
+|--------|------------------|----------------------------------------------------|
+| POST   | /apikeys         | Cria chave — raw key retornada **uma única vez**   |
+| GET    | /apikeys         | Lista chaves do usuário (sem expor o hash)         |
+| DELETE | /apikeys/:id     | Revoga chave (soft-delete)                         |
 
 ### Usuários (admin only)
 
-| Método | Rota               | Descrição          |
-|--------|--------------------|--------------------|
-| GET    | /users             | Lista usuários     |
-| PATCH  | /users/:id/role    | Altera role        |
+| Método | Rota               | Descrição       |
+|--------|--------------------|-----------------|
+| GET    | /users             | Lista usuários  |
+| PATCH  | /users/:id/role    | Altera role     |
+
+## Formato da API Key
+
+```
+mcp_sk_<48 hex chars>
+```
+
+- 24 bytes aleatórios = **192 bits de entropia**
+- Armazenada no banco **apenas como hash SHA-256** — nunca em texto puro
+- Se perdida, revogue e crie uma nova
+
+### Usando a chave (duas formas)
+
+```bash
+# header dedicado
+curl https://seu-recurso.com/api \
+  -H "X-Api-Key: mcp_sk_a1b2c3..."
+
+# bearer token
+curl https://seu-recurso.com/api \
+  -H "Authorization: Bearer mcp_sk_a1b2c3..."
+```
+
+## Variáveis de ambiente
+
+```
+PORT=3000
+DATABASE_PATH=./data/app.db
+
+JWT_ACCESS_SECRET=...          # mínimo 32 chars
+JWT_ACCESS_EXPIRES_IN=1h       # só para sessões humanas
+```
+
+> `JWT_REFRESH_SECRET` não existe mais — não há refresh token.
 
 ## Configuração
 
 ```bash
 cp .env.example .env
-# edite .env com seus segredos
-```
-
-### Variáveis de ambiente
-
-```
-PORT=3000
-JWT_ACCESS_SECRET=...        # mínimo 32 chars
-JWT_REFRESH_SECRET=...       # mínimo 32 chars
-JWT_ACCESS_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
-DATABASE_PATH=./data/app.db
+# edite JWT_ACCESS_SECRET
 ```
 
 ## Executar
@@ -69,14 +113,10 @@ npm start         # produção local
 ### Docker (duas instâncias + nginx)
 
 ```bash
-# 1. configure os segredos no .env
 cp .env.example .env
-# edite JWT_ACCESS_SECRET e JWT_REFRESH_SECRET
+# edite JWT_ACCESS_SECRET
 
-# 2. suba o stack completo
 docker compose up -d --build
-
-# 3. a API estará disponível em http://localhost
 curl http://localhost/health
 ```
 
@@ -96,43 +136,60 @@ curl http://localhost/health
          └─────────┘
 ```
 
-> **Nota:** As duas instâncias compartilham o mesmo volume Docker (`sqlite_data`).
-> SQLite com WAL mode suporta múltiplos leitores e um escritor por vez via
-> file-locking POSIX — adequado para cargas de baixo/médio volume.
+> SQLite com WAL mode suporta múltiplos leitores e um escritor concorrente via
+> file-locking POSIX — adequado para baixo/médio volume.
 > Para alta escala, migre para PostgreSQL/MySQL.
 
-## Exemplos
+## Exemplos de uso
 
-### Cadastro
+### 1. Criar conta e obter JWT
+
 ```bash
 curl -X POST http://localhost:3000/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name":"João","email":"joao@example.com","password":"senha1234"}'
 ```
 
-### Login
+### 2. Login
+
 ```bash
 curl -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"joao@example.com","password":"senha1234"}'
+# → { "access_token": "<jwt>" }
 ```
 
-### Usar access token
-```bash
-curl http://localhost:3000/auth/me \
-  -H "Authorization: Bearer <access_token>"
-```
+### 3. Criar API Key para um agente
 
-### Renovar token
 ```bash
-curl -X POST http://localhost:3000/auth/refresh \
+curl -X POST http://localhost:3000/apikeys \
+  -H "Authorization: Bearer <jwt>" \
   -H "Content-Type: application/json" \
-  -d '{"refresh_token":"<refresh_token>"}'
+  -d '{"name":"Meu agente Claude","scopes":"read,write"}'
+# → { "key": "mcp_sk_a1b2c3...", "id": 1, ... }
+#   ^ guarde esta chave — ela não será exibida novamente
+```
+
+### 4. Listar chaves
+
+```bash
+curl http://localhost:3000/apikeys \
+  -H "Authorization: Bearer <jwt>"
+# → [{ "id":1, "name":"Meu agente Claude", "key_prefix":"mcp_sk_a1b2c3...", ... }]
+```
+
+### 5. Revogar chave
+
+```bash
+curl -X DELETE http://localhost:3000/apikeys/1 \
+  -H "Authorization: Bearer <jwt>"
 ```
 
 ## Segurança
 
-- Refresh tokens são armazenados como hash SHA-256 no banco (nunca em texto puro)
-- Rotação de refresh token: cada uso invalida o token anterior
-- Sessões expiradas são limpas automaticamente no login
-- Passwords com bcrypt, fator 12
+- API keys armazenadas como **hash SHA-256** — banco vazado não expõe as chaves
+- `last_used_at` atualizado a cada uso (auditoria)
+- Revogação imediata via `DELETE /apikeys/:id` (soft-delete com `revoked_at`)
+- Suporte a `expires_at` por chave (expiração opcional)
+- Senhas com bcrypt fator 12
+- JWT stateless de 1 h apenas para gerenciamento humano
