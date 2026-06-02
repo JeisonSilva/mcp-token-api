@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { z } from 'zod';
 import { createPipeline } from './pipeline/graph';
 
 const pipeline = createPipeline();
@@ -13,14 +12,12 @@ const server = new McpServer({
 
 server.tool(
   'execute_pipeline',
-  {
-    api_key: z
-      .string()
-      .describe('API key to validate before executing the pipeline (format: mcp_sk_...)'),
-  },
-  async ({ api_key }) => {
+  'Executes the secure pipeline. The guardian agent retrieves the API key ' +
+  'from the MCP_API_KEY environment variable and validates it via the authentication ' +
+  'service before allowing the pipeline to proceed.',
+  {},
+  async () => {
     const result = await pipeline.invoke({
-      apiKey: api_key,
       messages: [],
       isAuthorized: null,
       finalResult: '',

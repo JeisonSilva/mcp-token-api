@@ -1,25 +1,33 @@
 import { ChatAnthropic } from '@langchain/anthropic';
 import { AIMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
+import { StructuredTool } from '@langchain/core/tools';
+import { getApiKeyTool } from '../tools/getApiKey';
 import { validateApiKeyTool } from '../tools/validateApiKey';
 import { PipelineStateType } from '../state';
 
-const GUARDIAN_SYSTEM_PROMPT = `You are a security guardian agent. Your sole responsibility is to \
-validate API keys before any request is allowed through the pipeline.
+const TOOLS: StructuredTool[] = [getApiKeyTool, validateApiKeyTool];
 
-Rules you must never break:
-1. Always call the validate_api_key tool with the provided key — no exceptions.
-2. After receiving the tool result, respond with a single decision:
-   - If valid=true → reply exactly: AUTHORIZED: API key is valid. Access granted.
-   - If valid=false → reply exactly: UNAUTHORIZED: Access denied. Reason: <reason from tool>.
-3. Never approve access without a successful tool call.
-4. Never fabricate or assume the validity of a key.`;
+const GUARDIAN_SYSTEM_PROMPT = `You are a security guardian agent. Your sole responsibility is to \
+retrieve and validate the configured API key before allowing any request through the pipeline.
+
+You MUST follow these steps in order — no exceptions:
+1. Call get_api_key to retrieve the API key from the environment.
+2. If get_api_key returns found=false, immediately respond:
+   UNAUTHORIZED: Access denied. No API key is configured in the environment.
+3. Call validate_api_key with the api_key value returned in step 1.
+4. After receiving the validation result, respond with exactly one of:
+   - AUTHORIZED: API key is valid. Access granted.
+   - UNAUTHORIZED: Access denied. Reason: <reason from validation>.
+
+Never approve access without completing both tool calls successfully.
+Never fabricate or assume the validity of a key.`;
 
 function buildLLM() {
   return new ChatAnthropic({
     model: process.env.ANTHROPIC_MODEL ?? 'claude-haiku-4-5-20251001',
     temperature: 0,
     maxTokens: 512,
-  }).bindTools([validateApiKeyTool]);
+  }).bindTools(TOOLS);
 }
 
 export async function apiKeyGuardNode(
@@ -29,10 +37,10 @@ export async function apiKeyGuardNode(
 
   const conversationMessages: (SystemMessage | HumanMessage | AIMessage | ToolMessage)[] = [
     new SystemMessage(GUARDIAN_SYSTEM_PROMPT),
-    new HumanMessage(`Validate the following API key and grant or deny access: ${state.apiKey}`),
+    new HumanMessage('Retrieve the API key from the environment and validate it. Grant or deny access based on the result.'),
   ];
 
-  // Agentic loop: let the LLM call tools until it produces a final text response
+  // Agentic loop: iterate until the LLM produces a final text verdict
   while (true) {
     const response = await llm.invoke(conversationMessages) as AIMessage;
     conversationMessages.push(response);
@@ -40,7 +48,6 @@ export async function apiKeyGuardNode(
     const toolCalls = response.tool_calls ?? [];
 
     if (toolCalls.length === 0) {
-      // LLM produced its final verdict
       const content = typeof response.content === 'string' ? response.content : '';
       const isAuthorized =
         content.toUpperCase().startsWith('AUTHORIZED') &&
@@ -55,9 +62,13 @@ export async function apiKeyGuardNode(
       };
     }
 
-    // Execute each tool call and append results
+    // Execute each tool call and feed results back
     for (const toolCall of toolCalls) {
-      const result = await validateApiKeyTool.invoke(toolCall.args as { api_key: string });
+      const toolFn = TOOLS.find((t) => t.name === toolCall.name);
+      const result = toolFn
+        ? await toolFn.invoke(toolCall.args as Record<string, unknown>)
+        : JSON.stringify({ error: `Unknown tool: ${toolCall.name}` });
+
       conversationMessages.push(
         new ToolMessage({
           content: typeof result === 'string' ? result : JSON.stringify(result),
