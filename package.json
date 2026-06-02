@@ -7,6 +7,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "nodemon --exec ts-node src/server.ts",
+    "mcp": "ts-node src/mcp/index.ts",
+    "mcp:build": "tsc && node dist/mcp/index.js",
     "typecheck": "tsc --noEmit"
   },
   "repository": {
@@ -17,6 +19,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@langchain/anthropic": "^1.4.0",
+    "@langchain/core": "^1.1.48",
+    "@langchain/langgraph": "^1.3.3",
+    "@langchain/openai": "^1.4.7",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.10.0",
     "dotenv": "^17.4.2",
