@@ -1,6 +1,7 @@
 import express from 'express';
 import authRouter from './routes/auth';
 import usersRouter from './routes/users';
+import apiKeysRouter from './routes/apikeys';
 
 const app = express();
 
@@ -10,6 +11,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 app.use('/auth', authRouter);
 app.use('/users', usersRouter);
+app.use('/apikeys', apiKeysRouter);
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 

@@ -22,13 +22,18 @@ db.exec(`
     updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
   );
 
-  CREATE TABLE IF NOT EXISTS sessions (
-    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id            INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    refresh_token_hash TEXT    NOT NULL UNIQUE,
-    expires_at         TEXT    NOT NULL,
-    created_at         TEXT    NOT NULL DEFAULT (datetime('now'))
+  CREATE TABLE IF NOT EXISTS api_keys (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name         TEXT    NOT NULL,
+    key_hash     TEXT    NOT NULL UNIQUE,
+    key_prefix   TEXT    NOT NULL,
+    scopes       TEXT    NOT NULL DEFAULT 'read',
+    last_used_at TEXT,
+    expires_at   TEXT,
+    revoked_at   TEXT,
+    created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
   );
 
-  CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
 `);

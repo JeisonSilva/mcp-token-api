@@ -10,11 +10,16 @@ export interface User {
   updated_at: string;
 }
 
-export interface Session {
+export interface ApiKey {
   id: number;
   user_id: number;
-  refresh_token_hash: string;
-  expires_at: string;
+  name: string;
+  key_hash: string;       // SHA-256 do token bruto
+  key_prefix: string;     // primeiros 14 chars para exibição: "mcp_sk_ab12cd..."
+  scopes: string;         // ex: "read,write" (TEXT separado por vírgula)
+  last_used_at: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
   created_at: string;
 }
 
@@ -25,15 +30,11 @@ export interface JwtAccessPayload {
   type: 'access';
 }
 
-export interface JwtRefreshPayload {
-  sub: number;
-  type: 'refresh';
-}
-
 declare global {
   namespace Express {
     interface Request {
       user?: JwtAccessPayload;
+      apiKey?: { id: number; userId: number; scopes: string };
     }
   }
 }
