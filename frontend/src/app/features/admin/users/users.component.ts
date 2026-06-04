@@ -14,6 +14,7 @@ import { UserService } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { User } from '../../../core/models/auth.model';
 import { ChangeRoleDialogComponent } from './change-role-dialog.component';
+import { CreateOperatorDialogComponent } from './create-operator-dialog.component';
 
 @Component({
   selector: 'app-users',
@@ -30,6 +31,9 @@ import { ChangeRoleDialogComponent } from './change-role-dialog.component';
         <h2>Usuários</h2>
         <p>Gerencie usuários e permissões do sistema</p>
       </div>
+      <button mat-raised-button color="primary" (click)="openCreateOperator()">
+        <mat-icon>person_add</mat-icon> Novo Operador
+      </button>
     </div>
 
     <mat-card class="users-card" *ngIf="!loading(); else loadingTpl">
@@ -157,6 +161,15 @@ export class UsersComponent implements OnInit {
     this.userService.list().subscribe({
       next: (users) => { this.users.set(users); this.loading.set(false); },
       error: () => this.loading.set(false),
+    });
+  }
+
+  openCreateOperator(): void {
+    const ref = this.dialog.open(CreateOperatorDialogComponent, { width: '440px', disableClose: true });
+    ref.afterClosed().subscribe((user) => {
+      if (!user) return;
+      this.snackBar.open(`Operador "${user.name}" criado com sucesso`, 'OK', { duration: 3000 });
+      this.loadUsers();
     });
   }
 

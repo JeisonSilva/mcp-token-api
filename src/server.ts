@@ -1,9 +1,12 @@
 import 'dotenv/config';
-import './db/database'; // initializes DB and runs migrations
+import './db/database';
+import { seedAdmin } from './db/seed';
 import app from './app';
 
 const port = parseInt(process.env.PORT ?? '3000', 10);
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+seedAdmin().then(() => {
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
 });

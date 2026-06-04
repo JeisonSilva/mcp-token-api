@@ -58,7 +58,7 @@ export class AuthService {
   }
 
   private storeSession(res: AuthResponse): void {
-    localStorage.setItem(this.TOKEN_KEY, res.token);
+    localStorage.setItem(this.TOKEN_KEY, res.access_token);
     localStorage.setItem(this.USER_KEY, JSON.stringify(res.user));
     this.currentUser.set(res.user);
   }

@@ -1,168 +1,106 @@
 # mcp-token-api
 
-Provedor de **API Keys para MCPs e agentes de IA**, com autenticação de usuários via JWT.
+Provedor de **API Keys para MCPs e agentes de IA**, com dashboard web e autenticação de usuários via JWT.
 
-## Conceito
+## Como funciona
 
-MCPs e agentes de IA precisam de credenciais **estáticas e de longa duração** — o ciclo
-de refresh token (credencial que expira periodicamente) quebra esse padrão porque o agente
-não tem usuário humano para renovar o token interativamente.
+MCPs e agentes precisam de credenciais estáticas de longa duração — tokens JWT que expiram não servem para esse padrão. Este serviço separa os dois mundos:
 
-Este serviço separa os dois mundos:
-
-| Quem        | Como autentica         | Para quê                          |
-|-------------|------------------------|-----------------------------------|
-| **Humano**  | `POST /auth/login` → JWT (1h) | Gerenciar API keys via dashboard |
-| **MCP/Agent** | `X-Api-Key: mcp_sk_...` | Consumir recursos protegidos      |
+| Quem | Como autentica | Para quê |
+|------|----------------|----------|
+| **Humano** | `POST /auth/login` → JWT (15 min) | Gerenciar API keys via dashboard |
+| **MCP / Agente** | `X-Api-Key: mcp_sk_...` | Consumir recursos protegidos |
 
 ## Stack
 
-- **Runtime**: Node.js + TypeScript
-- **Framework**: Express 5
-- **Banco**: SQLite via `better-sqlite3` (WAL mode)
-- **Auth humano**: JWT HS256, expira em 1 h (stateless — sem refresh)
+- **API**: Node.js + TypeScript + Express 5
+- **Frontend**: Angular 21 + Angular Material
+- **Banco**: SQLite (`better-sqlite3`, WAL mode)
+- **Auth humano**: JWT HS256, stateless, sem refresh
 - **Auth agente**: API Key com 192 bits de entropia, hash SHA-256 no banco
-- **Senha**: bcrypt (fator 12)
-- **Validação**: Zod
+- **Infra**: nginx (load balancer + serve do frontend) + 2 instâncias da API
 
-## Roles de usuário
+---
 
-| Role       | Descrição                              |
-|------------|----------------------------------------|
-| `operator` | Role padrão no cadastro               |
-| `admin`    | Gerencia usuários e roles             |
+## Início rápido (Docker)
 
-## Endpoints
-
-### Autenticação (humano → JWT)
-
-| Método | Rota             | Auth     | Descrição                          |
-|--------|------------------|----------|------------------------------------|
-| POST   | /auth/register   | —        | Cadastro (role padrão: `operator`) |
-| POST   | /auth/login      | —        | Login, retorna JWT (1 h)           |
-| POST   | /auth/logout     | Bearer   | 204 — cliente descarta o token     |
-| GET    | /auth/me         | Bearer   | Dados do usuário autenticado       |
-
-### API Keys (requer JWT)
-
-| Método | Rota             | Descrição                                          |
-|--------|------------------|----------------------------------------------------|
-| POST   | /apikeys         | Cria chave — raw key retornada **uma única vez**   |
-| GET    | /apikeys         | Lista chaves do usuário (sem expor o hash)         |
-| DELETE | /apikeys/:id     | Revoga chave (soft-delete)                         |
-
-### Usuários (admin only)
-
-| Método | Rota               | Descrição       |
-|--------|--------------------|-----------------|
-| GET    | /users             | Lista usuários  |
-| PATCH  | /users/:id/role    | Altera role     |
-
-## Formato da API Key
-
-```
-mcp_sk_<48 hex chars>
-```
-
-- 24 bytes aleatórios = **192 bits de entropia**
-- Armazenada no banco **apenas como hash SHA-256** — nunca em texto puro
-- Se perdida, revogue e crie uma nova
-
-### Usando a chave (duas formas)
-
-```bash
-# header dedicado
-curl https://seu-recurso.com/api \
-  -H "X-Api-Key: mcp_sk_a1b2c3..."
-
-# bearer token
-curl https://seu-recurso.com/api \
-  -H "Authorization: Bearer mcp_sk_a1b2c3..."
-```
-
-## Variáveis de ambiente
-
-```
-PORT=3000
-DATABASE_PATH=./data/app.db
-
-JWT_ACCESS_SECRET=...          # mínimo 32 chars
-JWT_ACCESS_EXPIRES_IN=1h       # só para sessões humanas
-```
-
-> `JWT_REFRESH_SECRET` não existe mais — não há refresh token.
-
-## Configuração
+### 1. Configurar variáveis de ambiente
 
 ```bash
 cp .env.example .env
-# edite JWT_ACCESS_SECRET
+# edite .env com seus valores
 ```
 
-## Executar
+O `JWT_ACCESS_SECRET` é necessário para o Docker Compose mas não está no `.env.example` — defina-o como variável de ambiente ou adicione ao `.env`:
 
-### Local (desenvolvimento)
+```bash
+# .env
+JWT_ACCESS_SECRET=uma_string_aleatoria_com_minimo_32_caracteres
+```
+
+### 2. Subir os serviços
+
+```bash
+docker compose up -d --build
+```
+
+Isso constrói e sobe:
+- `nginx` na porta `80` — serve o frontend e faz proxy da API
+- `api1` e `api2` — duas instâncias do backend (load balance automático)
+
+### 3. Verificar
+
+```bash
+curl http://localhost/health
+# → {"status":"ok"}
+```
+
+Abra `http://localhost` no navegador para acessar o dashboard.
+
+---
+
+## Desenvolvimento local
 
 ```bash
 npm install
-npm run dev       # hot-reload via nodemon
-npm run build     # compila para dist/
-npm start         # produção local
+npm run dev          # API com hot-reload (nodemon)
 ```
 
-### Docker (duas instâncias + nginx)
+Em outro terminal:
 
 ```bash
-cp .env.example .env
-# edite JWT_ACCESS_SECRET
-
-docker compose up -d --build
-curl http://localhost/health
+cd frontend
+npm install
+npm start            # Angular dev server em http://localhost:4200
 ```
 
-**Arquitetura Docker:**
+A variável `API_BASE_URL` no `.env` define para onde o MCP server aponta.
 
-```
-         ┌─────────┐
-:80  ──▶ │  nginx  │  (load balancer — least_conn)
-         └────┬────┘
-         ┌────┴────┐
-    ┌────▼──┐  ┌───▼───┐
-    │ api1  │  │ api2  │  (Node.js :3000)
-    └────┬──┘  └───┬───┘
-         └────┬────┘
-         ┌────▼────┐
-         │ SQLite  │  (volume Docker compartilhado, WAL mode)
-         └─────────┘
-```
+---
 
-> SQLite com WAL mode suporta múltiplos leitores e um escritor concorrente via
-> file-locking POSIX — adequado para baixo/médio volume.
-> Para alta escala, migre para PostgreSQL/MySQL.
+## Como usar
 
-## Exemplos de uso
-
-### 1. Criar conta e obter JWT
+### 1. Criar conta
 
 ```bash
-curl -X POST http://localhost:3000/auth/register \
+curl -X POST http://localhost/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"name":"João","email":"joao@example.com","password":"senha1234"}'
+  -d '{"name":"Seu Nome","email":"email@exemplo.com","password":"senha1234"}'
 ```
 
-### 2. Login
+### 2. Fazer login
 
 ```bash
-curl -X POST http://localhost:3000/auth/login \
+curl -X POST http://localhost/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"joao@example.com","password":"senha1234"}'
-# → { "access_token": "<jwt>" }
+  -d '{"email":"email@exemplo.com","password":"senha1234"}'
+# → { "access_token": "<jwt>", "user": { ... } }
 ```
 
-### 3. Criar API Key para um agente
+### 3. Criar uma API Key para um agente
 
 ```bash
-curl -X POST http://localhost:3000/apikeys \
+curl -X POST http://localhost/apikeys \
   -H "Authorization: Bearer <jwt>" \
   -H "Content-Type: application/json" \
   -d '{"name":"Meu agente Claude","scopes":"read,write"}'
@@ -170,26 +108,95 @@ curl -X POST http://localhost:3000/apikeys \
 #   ^ guarde esta chave — ela não será exibida novamente
 ```
 
-### 4. Listar chaves
+### 4. Usar a chave no agente
 
 ```bash
-curl http://localhost:3000/apikeys \
-  -H "Authorization: Bearer <jwt>"
-# → [{ "id":1, "name":"Meu agente Claude", "key_prefix":"mcp_sk_a1b2c3...", ... }]
+# via header dedicado
+curl http://localhost/validate \
+  -H "X-Api-Key: mcp_sk_a1b2c3..."
+
+# via Bearer token
+curl http://localhost/validate \
+  -H "Authorization: Bearer mcp_sk_a1b2c3..."
 ```
 
-### 5. Revogar chave
+### 5. Revogar a chave
 
 ```bash
-curl -X DELETE http://localhost:3000/apikeys/1 \
+curl -X DELETE http://localhost/apikeys/1 \
   -H "Authorization: Bearer <jwt>"
+```
+
+---
+
+## Endpoints
+
+### Autenticação
+
+| Método | Rota | Auth | Descrição |
+|--------|------|------|-----------|
+| POST | `/auth/register` | — | Cadastro (role padrão: `operator`) |
+| POST | `/auth/login` | — | Login, retorna JWT |
+| POST | `/auth/logout` | Bearer | Logout (JWT stateless — cliente descarta) |
+| GET | `/auth/me` | Bearer | Dados do usuário autenticado |
+
+### API Keys
+
+| Método | Rota | Auth | Descrição |
+|--------|------|------|-----------|
+| POST | `/apikeys` | Bearer | Cria chave — raw key retornada **uma única vez** |
+| GET | `/apikeys` | Bearer | Lista chaves do usuário |
+| DELETE | `/apikeys/:id` | Bearer | Revoga chave |
+
+### Validação (para uso pelo agente)
+
+| Método | Rota | Auth | Descrição |
+|--------|------|------|-----------|
+| GET | `/validate` | X-Api-Key | Valida a chave e retorna os scopes |
+
+### Administração (admin only)
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/users` | Lista usuários |
+| PATCH | `/users/:id/role` | Altera role |
+
+---
+
+## Variáveis de ambiente
+
+| Variável | Obrigatório | Descrição |
+|----------|-------------|-----------|
+| `JWT_ACCESS_SECRET` | Sim (Docker) | Secret para assinar JWTs — mínimo 32 chars |
+| `JWT_ACCESS_EXPIRES_IN` | Não | Expiração do JWT (padrão: `15m`) |
+| `PORT` | Não | Porta da API (padrão: `3000`) |
+| `DATABASE_PATH` | Não | Caminho do SQLite (padrão: `./data/app.db`) |
+| `OPENROUTER_API_KEY` | MCP server | Chave do OpenRouter para o pipeline LangGraph |
+| `MCP_API_KEY` | MCP server | API Key gerada por este serviço para o agente |
+
+---
+
+## Arquitetura Docker
+
+```
+         ┌─────────────┐
+:80  ──▶ │    nginx    │  frontend Angular + proxy API
+         └──────┬──────┘
+           ┌────┴────┐
+      ┌────▼───┐ ┌───▼────┐
+      │  api1  │ │  api2  │  Node.js :3000 (least_conn)
+      └────┬───┘ └───┬────┘
+           └────┬────┘
+           ┌────▼────┐
+           │ SQLite  │  volume Docker compartilhado (WAL mode)
+           └─────────┘
 ```
 
 ## Segurança
 
-- API keys armazenadas como **hash SHA-256** — banco vazado não expõe as chaves
-- `last_used_at` atualizado a cada uso (auditoria)
-- Revogação imediata via `DELETE /apikeys/:id` (soft-delete com `revoked_at`)
+- API keys armazenadas apenas como **hash SHA-256** — banco vazado não expõe as chaves
+- `last_used_at` atualizado a cada uso para auditoria
+- Revogação imediata via `DELETE /apikeys/:id`
 - Suporte a `expires_at` por chave (expiração opcional)
 - Senhas com bcrypt fator 12
-- JWT stateless de 1 h apenas para gerenciamento humano
+- JWT stateless de curta duração apenas para sessões humanas
