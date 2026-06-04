@@ -7,15 +7,14 @@ export const ApiKeyModel = {
     name: string,
     keyHash: string,
     keyPrefix: string,
-    scopes: string,
     expiresAt: Date | null
   ): ApiKey {
     return db
       .prepare(
-        `INSERT INTO api_keys (user_id, name, key_hash, key_prefix, scopes, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?) RETURNING *`
+        `INSERT INTO api_keys (user_id, name, key_hash, key_prefix, expires_at)
+         VALUES (?, ?, ?, ?, ?) RETURNING *`
       )
-      .get(userId, name, keyHash, keyPrefix, scopes, expiresAt ? expiresAt.toISOString() : null) as ApiKey;
+      .get(userId, name, keyHash, keyPrefix, expiresAt ? expiresAt.toISOString() : null) as ApiKey;
   },
 
   findByHash(hash: string): ApiKey | undefined {
@@ -27,7 +26,7 @@ export const ApiKeyModel = {
   listByUser(userId: number): Omit<ApiKey, 'key_hash'>[] {
     return db
       .prepare(
-        `SELECT id, user_id, name, key_prefix, scopes, last_used_at, expires_at, revoked_at, created_at
+        `SELECT id, user_id, name, key_prefix, last_used_at, expires_at, revoked_at, created_at
          FROM api_keys WHERE user_id = ? ORDER BY id`
       )
       .all(userId) as Omit<ApiKey, 'key_hash'>[];

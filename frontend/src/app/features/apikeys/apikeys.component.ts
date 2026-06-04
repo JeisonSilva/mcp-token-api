@@ -60,15 +60,6 @@ import { ShowKeyDialogComponent } from './show-key-dialog.component';
             </td>
           </ng-container>
 
-          <ng-container matColumnDef="scopes">
-            <th mat-header-cell *matHeaderCellDef>Escopos</th>
-            <td mat-cell *matCellDef="let key">
-              <mat-chip-set>
-                <mat-chip *ngFor="let scope of getScopes(key)" class="scope-chip">{{ scope }}</mat-chip>
-              </mat-chip-set>
-            </td>
-          </ng-container>
-
           <ng-container matColumnDef="created_at">
             <th mat-header-cell *matHeaderCellDef>Criado em</th>
             <td mat-cell *matCellDef="let key">{{ key.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
@@ -129,12 +120,6 @@ import { ShowKeyDialogComponent } from './show-key-dialog.component';
               <td mat-cell *matCellDef="let key">
                 <strong>{{ key.name }}</strong>
                 <div class="key-prefix">{{ key.key_prefix }}...</div>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="scopes">
-              <th mat-header-cell *matHeaderCellDef>Escopos</th>
-              <td mat-cell *matCellDef="let key">
-                <mat-chip-set><mat-chip *ngFor="let s of getScopes(key)">{{ s }}</mat-chip></mat-chip-set>
               </td>
             </ng-container>
             <ng-container matColumnDef="created_at">
@@ -219,7 +204,7 @@ export class ApiKeysComponent implements OnInit {
   revokingId = signal<number | null>(null);
   showRevoked = false;
 
-  displayedColumns = ['name', 'scopes', 'created_at', 'last_used', 'expires_at', 'status', 'actions'];
+  displayedColumns = ['name', 'created_at', 'last_used', 'expires_at', 'status', 'actions'];
 
   activeKeys = () => this.keys().filter(k => !k.revoked_at);
   revokedKeys = () => this.keys().filter(k => !!k.revoked_at);
@@ -276,10 +261,6 @@ export class ApiKeysComponent implements OnInit {
         },
       });
     });
-  }
-
-  getScopes(key: ApiKey): string[] {
-    return key.scopes ? key.scopes.split(',').map(s => s.trim()).filter(Boolean) : [];
   }
 
   isExpired(key: ApiKey): boolean {

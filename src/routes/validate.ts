@@ -9,7 +9,6 @@ router.post('/', authenticateApiKey, (req: Request, res: Response): void => {
     valid: true,
     key_id: req.apiKey!.id,
     user_id: req.apiKey!.userId,
-    scopes: req.apiKey!.scopes,
   });
 });
 
