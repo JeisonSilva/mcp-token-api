@@ -1,0 +1,19 @@
+{
+    "servers":{
+        "docs":{
+            "command":"node",
+            "args":[
+                "--experimental-striip-types","./index.ts"
+            ],
+            "env":{
+                "OPENROUTER_API_KEY":"",
+                "OPENROUTER_MODEL":"openai/gpt-4o-mini",
+                "TEMPERATURE":"0.1",
+                "OPENROUTER_SITE_URL":"http://localhost:3000",
+                "OPENROUTER_APP_NAME":"mcp-langgraph-apikey",
+                "API_BASE_URL":"http://localhost:3000",
+                "API_KEY":""
+            }
+        }
+    }
+}
