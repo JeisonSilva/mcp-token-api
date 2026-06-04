@@ -154,12 +154,12 @@ export class CreateApiKeyDialogComponent {
     const { name, expires_at } = this.form.value;
     const body = {
       name: name!,
-      scopes: Array.from(this.selectedScopes),
-      ...(expires_at ? { expires_at: (expires_at as Date).toISOString() } : {}),
+      scopes: Array.from(this.selectedScopes).join(','),
+      ...(expires_at ? { expiresAt: (expires_at as Date).toISOString() } : {}),
     };
 
     this.apiKeyService.create(body).subscribe({
-      next: (res) => this.dialogRef.close({ rawKey: res.rawKey, name: res.apiKey.name }),
+      next: (res) => this.dialogRef.close({ rawKey: res.key, name: res.name }),
       error: (err) => {
         this.errorMessage = err.error?.error || 'Erro ao criar API Key';
         this.loading = false;

@@ -1,5 +1,28 @@
 services:
 
+  # ── frontend Angular (nginx serve estático + proxy para api-lb) ───────────
+  frontend:
+    build:
+      context: .
+      dockerfile: nginx/frontend.Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api-lb
+    restart: unless-stopped
+
+  # ── load balancer da API (least_conn entre api1 e api2) ──────────────────
+  api-lb:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx/api-lb.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      api1:
+        condition: service_healthy
+      api2:
+        condition: service_healthy
+    restart: unless-stopped
+
   # ── instância 1 da API ────────────────────────────────────────────────────
   api1:
     build:
@@ -9,11 +32,11 @@ services:
       PORT: "3000"
       DATABASE_PATH: /data/app.db
       JWT_ACCESS_EXPIRES_IN: "15m"
-      JWT_REFRESH_EXPIRES_IN: "7d"
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     volumes:
-      - sqlite_data:/data          # banco compartilhado entre as instâncias
+      - sqlite_data:/data
     restart: unless-stopped
     healthcheck:
       test: >
@@ -33,9 +56,9 @@ services:
       PORT: "3000"
       DATABASE_PATH: /data/app.db
       JWT_ACCESS_EXPIRES_IN: "15m"
-      JWT_REFRESH_EXPIRES_IN: "7d"
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     volumes:
       - sqlite_data:/data
     restart: unless-stopped
@@ -48,23 +71,6 @@ services:
       start_period: 10s
       retries: 3
 
-  # ── load balancer + frontend ──────────────────────────────────────────────
-  nginx:
-    build:
-      context: .
-      dockerfile: nginx/Dockerfile
-    ports:
-      - "80:80"
-    depends_on:
-      api1:
-        condition: service_healthy
-      api2:
-        condition: service_healthy
-    restart: unless-stopped
-
 # ── volumes ───────────────────────────────────────────────────────────────────
 volumes:
   sqlite_data:
-    # volume nomeado: garante que api1 e api2 acessam o mesmo arquivo SQLite.
-    # SQLite com WAL mode suporta múltiplos leitores/um escritor concorrente
-    # via file-locking POSIX — adequado para duas instâncias de baixo volume.
