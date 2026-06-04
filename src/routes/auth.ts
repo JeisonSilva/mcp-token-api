@@ -42,7 +42,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = UserModel.create(name, email, passwordHash);
+  const user = UserModel.create(name, email, passwordHash, 'admin');
   const accessToken = issueAccessToken(user.id, user.email, user.role);
 
   res.status(201).json({

@@ -10,11 +10,11 @@ export const UserModel = {
     return db.prepare('SELECT * FROM users WHERE id = ?').get(id) as User | undefined;
   },
 
-  create(name: string, email: string, passwordHash: string): User {
+  create(name: string, email: string, passwordHash: string, role: Role = 'operator'): User {
     const stmt = db.prepare(
-      'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?) RETURNING *'
+      'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?) RETURNING *'
     );
-    return stmt.get(name, email, passwordHash) as User;
+    return stmt.get(name, email, passwordHash, role) as User;
   },
 
   updateRole(id: number, role: Role): User | undefined {
