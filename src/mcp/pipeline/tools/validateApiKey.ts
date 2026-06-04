@@ -28,7 +28,6 @@ export const validateApiKeyTool = tool(
         valid: true,
         key_id: body['key_id'],
         user_id: body['user_id'],
-        scopes: body['scopes'],
       });
     }
 
@@ -41,7 +40,7 @@ export const validateApiKeyTool = tool(
     name: 'validate_api_key',
     description:
       'Validates an API key against the authentication service. ' +
-      'Returns { valid: true, key_id, user_id, scopes } on success or ' +
+      'Returns { valid: true, key_id, user_id } on success or ' +
       '{ valid: false, reason } on failure.',
     schema: z.object({
       api_key: z.string().describe('The API key to validate (format: mcp_sk_...)'),

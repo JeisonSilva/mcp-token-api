@@ -15,8 +15,7 @@ export interface ApiKey {
   user_id: number;
   name: string;
   key_hash: string;       // SHA-256 do token bruto
-  key_prefix: string;     // primeiros 14 chars para exibição: "mcp_sk_ab12cd..."
-  scopes: string;         // ex: "read,write" (TEXT separado por vírgula)
+  key_prefix: string;
   last_used_at: string | null;
   expires_at: string | null;
   revoked_at: string | null;
@@ -34,7 +33,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: JwtAccessPayload;
-      apiKey?: { id: number; userId: number; scopes: string };
+      apiKey?: { id: number; userId: number };
     }
   }
 }

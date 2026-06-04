@@ -41,6 +41,6 @@ export function authenticateApiKey(req: Request, res: Response, next: NextFuncti
 
   ApiKeyModel.touchLastUsed(apiKey.id);
 
-  req.apiKey = { id: apiKey.id, userId: apiKey.user_id, scopes: apiKey.scopes };
+  req.apiKey = { id: apiKey.id, userId: apiKey.user_id };
   next();
 }
