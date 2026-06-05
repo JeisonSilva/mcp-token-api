@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import z from "zod";
 
@@ -10,9 +12,9 @@ export default async function authenticate(server: McpServer){
         },
         
     },
-    async ({key}) => {
+    async () => {
         const apiAutenticacao = new ApiAuthentication();
-        const isValid = await apiAutenticacao.validateApiKey(key);
+        const isValid = await apiAutenticacao.validateApiKey(process.env.API_KEY ?? "");
         if(!isValid){
             return {
                 content: [{type: "text", text: "Chave de API inválida!"}]

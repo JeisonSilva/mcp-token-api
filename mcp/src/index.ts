@@ -1,7 +1,7 @@
-#!/usr/bin/env tsx 
+#!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import authenticate from "./tools/authentication.ts";
+import authenticate from "./tools/authentication.js";
 
 const server = new McpServer({
   name: "token-authentication",
