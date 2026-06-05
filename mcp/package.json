@@ -1,12 +1,13 @@
 {
   "name": "mcp-token-api-mcp",
   "version": "1.0.0",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node index.ts",
-    "inspect": "mcp-inspector ts-node index.ts",
+    "dev": "node --experimental-strip-types index.ts",
+    "inspect": "mcp-inspector node --experimental-strip-types index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

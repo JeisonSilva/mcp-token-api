@@ -3,7 +3,7 @@
         "docs":{
             "command":"node",
             "args":[
-                "--experimental-striip-types","./index.ts"
+                "--experimental-strip-types","./index.ts"
             ],
             "env":{
                 "OPENROUTER_API_KEY":"",
