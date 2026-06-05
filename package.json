@@ -1,0 +1,17 @@
+{
+  "name": "mcp-token-api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "up": "docker compose up -d",
+    "down": "docker compose down",
+    "destroy": "docker compose down -v --remove-orphans",
+    "update": "docker compose up -d --build --remove-orphans",
+    "verdaccio:logs": "docker compose logs -f verdaccio",
+    "verdaccio:adduser": "npm adduser --registry http://localhost:4873",    
+    "verdaccio:use": "npm config set registry http://localhost:4873",
+    "verdaccio:reset": "npm config delete registry",
+    "verdaccio:publish": "npm publish --registry http://localhost:4873"
+    
+  }
+}

@@ -1,14 +1,25 @@
 {
-  "name": "mcp-token-api-mcp",
-  "version": "1.0.0",
+  "name": "@jeison-mcp/mcp-token-api-mcp",
+  "version": "0.1.6",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "./dist/index.js",
+  "bin": {
+    "mcp-token-api": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x ./dist/index.js",
     "start": "node dist/index.js",
     "dev": "node --experimental-strip-types index.ts",
     "inspect": "mcp-inspector node --experimental-strip-types index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verdaccio:release-bugfix": "npm version patch && npm publish --access public --registry http://localhost:4873",
+    "verdaccio:release-feature": "npm version minor && npm publish --access public --registry http://localhost:4873",
+    "verdaccio:release-break-change": "npm version major && npm publish --access public --registry http://localhost:4873",
+    "verdaccio:unpublish": "npm unpublish --force --registry http://localhost:4873 @jeison-mcp/mcp-token-api-mcp",
+    "verdaccio:login": "npm login --registry http://localhost:4873"
   },
   "dependencies": {
     "@langchain/anthropic": "^1.4.0",
@@ -17,6 +28,7 @@
     "@langchain/openai": "^1.4.7",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "dotenv": "^17.4.2",
+    "tsx": "^4.22.4",
     "zod": "^4.4.3"
   },
   "devDependencies": {
