@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import authenticate from "./tools/authentication.js";
+import chatBusiness from "./tools/chat_business.ts";
 
 const server = new McpServer({
   name: "token-authentication",
@@ -9,7 +9,7 @@ const server = new McpServer({
   description: "MCP server for token authentication",
 })
 
-await authenticate(server);
+await chatBusiness(server);
 
 const transport = new StdioServerTransport();
 server.connect(transport);
