@@ -8,7 +8,6 @@ export default async function authenticate(server: McpServer){
         title: "Auntenticação MCP",
         description: "Autentica mcp pela api-key",
         inputSchema:{
-            key: z.string().describe("API Key para autenticação")
         },
         
     },
