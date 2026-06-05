@@ -1,0 +1,28 @@
+{
+  "name": "mcp-token-api-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "node --experimental-strip-types index.ts",
+    "inspect": "mcp-inspector node --experimental-strip-types index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@langchain/anthropic": "^1.4.0",
+    "@langchain/core": "^1.1.48",
+    "@langchain/langgraph": "^1.3.3",
+    "@langchain/openai": "^1.4.7",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "dotenv": "^17.4.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/inspector": "^0.22.0",
+    "@types/node": "^25.9.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}
