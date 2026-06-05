@@ -27,7 +27,7 @@ export default async function authenticate(server: McpServer){
 
 
 class ApiAuthentication {
-    private readonly baseUrl = process.env.API_BASE_URL ?? "http://localhost:3000";
+    private readonly baseUrl = process.env.API_BASE_URL ?? "http://localhost";
 
     async validateApiKey(key: string): Promise<boolean> {
         const response = await fetch(`${this.baseUrl}/validate`, {
