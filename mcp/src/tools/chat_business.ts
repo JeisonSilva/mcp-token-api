@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ quiet: true });
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import z from "zod";
-import { businessPipeline } from "../graph/business_pipeline.js";
+import { businessPipeline } from "../graph/business_pipeline.ts";
 
 export default async function chatBusiness(server: McpServer) {
     server.registerTool("chat_business", {

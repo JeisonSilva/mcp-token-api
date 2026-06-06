@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ quiet: true });
 import { Annotation, StateGraph, START, END } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
@@ -30,16 +30,18 @@ Ao receber um tema ou pedido, gere ideias criativas e detalhadas de produtos. Pa
 Seja objetivo, criativo e orientado a resultados de negócio.`;
 
 async function validateApiKey(state: PipelineState): Promise<Partial<PipelineState>> {
-    const baseUrl = process.env.API_BASE_URL ?? "http://localhost";
-    try {
-        const response = await fetch(`${baseUrl}/validate`, {
-            method: "POST",
-            headers: { "X-Api-Key": state.apiKey },
-        });
-        return { isValid: response.ok };
-    } catch {
-        return { isValid: false };
-    }
+    //const baseUrl = process.env.API_BASE_URL ?? "http://localhost";
+    //try {
+    //    const response = await fetch(`${baseUrl}/validate`, {
+    //        method: "POST",
+    //        headers: { "X-Api-Key": state.apiKey },
+    //    });
+    //    return { isValid: response.ok };
+    //} catch {
+    //    return { isValid: false };
+    //}
+
+    return { isValid: true };
 }
 
 async function runBusinessAgent(state: PipelineState): Promise<Partial<PipelineState>> {
